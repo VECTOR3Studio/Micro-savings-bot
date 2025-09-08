@@ -3,12 +3,12 @@
     {
       "name": "iPhone",
       "target": 50,
-      "saved": 0
+      "saved": 15
     },
     {
       "name": "pc",
       "target": 50,
-      "saved": 15
+      "saved": 30
     }
   ]
 }
