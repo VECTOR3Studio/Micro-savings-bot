@@ -67,7 +67,7 @@ bot.onText(/\/add (\d+(\.\d{1,2})?)(?: (.+))?/, (msg, match) => {
     }
 
     userGoals[userId].forEach(goal => {
-        if(goalName.toLowerCase == goal.name.toLowerCase) {
+        if(goalName.toLowerCase() === goal.name.toLowerCase()) {
             goal.saved += amount;
             bot.sendMessage(chatId, `Goal ${goalName} updated. You saved ${amount.toFixed(2)}. Total saved: ${goal.saved.toFixed(2)} / ${goal.target.toFixed(2)}`);
             // Debuging, delete later
