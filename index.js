@@ -177,7 +177,49 @@ bot.onText(/\/goals/, (msg) => {
 bot.onText(/\/delete (.+)/, (msg, match) => {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
-    const goalNameQuery = match[1].trim()
+    const goalNameToDelete = match[1].trim(); // Rename to avoid confusion with internal targetGoal
+
+    // 1. Check if the user has any goals at all
+    if (!userGoals[userId] || userGoals[userId].length === 0) {
+        return bot.sendMessage(chatId, 'You have no active goals to delete. Set one with /setgoal.');
+    }
+
+    // 2. Find the index of the goal to delete
+    const goalIndex = userGoals[userId].findIndex(
+        (goal) => goal.name.toLowerCase() === goalNameToDelete.toLowerCase()
+    );
+
+    // 3. Check if the goal was found
+    if (goalIndex === -1) {
+        return bot.sendMessage(chatId, `Goal "${goalNameToDelete}" not found. Please check the name.`);
+    }
+
+    // --- All checks passed, proceed with deletion ---
+
+    // 4. Get the goal that is about to be deleted (optional, for confirmation message)
+    const deletedGoal = userGoals[userId][goalIndex];
+
+    // 5. Remove the goal from the array
+    userGoals[userId].splice(goalIndex, 1); // Removes 1 element at goalIndex
+
+    // 6. Handle if the deleted goal was the last interacted goal
+    if (lastInteractedGoal[userId] && lastInteractedGoal[userId].toLowerCase() === deletedGoal.name.toLowerCase()) {
+        delete lastInteractedGoal[userId]; // Remove it from lastInteractedGoal
+        bot.sendMessage(chatId, `Note: "${deletedGoal.name}" was your last interacted goal, so I've cleared that too.`);
+    }
+
+    bot.sendMessage(
+        chatId,
+        `Goal "${deletedGoal.name}" (target: $${deletedGoal.target.toFixed(2)}) has been deleted.`
+    );
+
+    // Debugging output (ensure it logs the correct variable)
+    console.log(`Goal "${deletedGoal.name}" deleted for user ${userId}. Remaining goals:`, JSON.stringify(userGoals[userId]));
+});
+
+// Add a specific handler for /delete without a goal name
+bot.onText(/\/delete$/, (msg) => {
+    bot.sendMessage(msg.chat.id, 'Usage: /delete <goal_name> (e.g., /delete New Book)');
 });
 
 console.log('Bot is running...');
