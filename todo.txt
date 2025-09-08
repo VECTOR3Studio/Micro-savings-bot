@@ -1,4 +1,4 @@
 Routes
     add - WIP
     delete
-    current goals
+    current goals - DONE

@@ -123,6 +123,41 @@ bot.onText(/\/add$/, (msg) => {
     bot.sendMessage(msg.chat.id, 'Usage: /add <amount> [goal_name] (e.g., /add 10 or /add 5 New Book)');
 });
 
+bot.onText(/\/progress (.+)/, (msg, match) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const goalNameQuery = match[1].trim();
+
+    if(!userGoals[userId] || userGoals[userId].length === 0) {
+        return bot.sendMessage(chatId, 'You have no active goals. Set one with /setgoal <name> <amount>.');
+    }
+
+    const targetGoal = userGoals[userId].find(goal => goal.name.toLowerCase() === goalNameQuery.toLowerCase());
+
+    if (!targetGoal) {
+        return bot.sendMessage(chatId, `Goal "${goalNameQuery}" not found. Please check the name.`);
+    }
+
+    const progress = (targetGoal.saved / targetGoal.target) * 100;
+    let message = `Progress for "${targetGoal.name}":`;
+    message += `\nSaved: $${targetGoal.saved.toFixed(2)} out of $${targetGoal.target.toFixed(2)}`;
+    message += `\n${progress.toFixed(2)}% completed.`;
+
+    if (targetGoal.saved >= targetGoal.target) {
+        message += `\n🎉 You've reached this goal!`;
+    } else {
+        message += `\nYou need to save $${(targetGoal.target - targetGoal.saved).toFixed(2)} more.`;
+    }
+
+    bot.sendMessage(chatId, message);
+
+    lastInteractedGoal[userId] = targetGoal.name;
+});
+
+bot.onText(/\/progress$/, (msg) => {
+    bot.sendMessage(msg.chat.id, 'Usage: /progress <goal_name> (e.g., /progress New Book)');
+});
+
 bot.onText(/\/goals/, (msg) => {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
@@ -137,6 +172,12 @@ bot.onText(/\/goals/, (msg) => {
     });
 
     bot.sendMessage(chatId, response);
+});
+
+bot.onText(/\/delete (.+)/, (msg, match) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const goalNameQuery = match[1].trim()
 });
 
 console.log('Bot is running...');
