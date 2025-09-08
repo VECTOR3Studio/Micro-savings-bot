@@ -7,6 +7,8 @@ const bot = new TGBot(token, { polling: true });
 
 const userGoals = {};
 
+const lastInteractedGoal = {};
+
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(msg.chat.id, 'Welcome to the Micro-savings Bot! Use /save <amount> to save money.');
 });
@@ -16,6 +18,7 @@ bot.onText(/\/help/, (msg) => {
         `I can help you save for your small goals.
 
 Here's what you can do:
+
 - /setgoal <name> <amount> (e.g., /setgoal New Book 50)
 - /add <amount> [goal_name] (e.g., /add 10 or /add 5 New Book)
 - /goals (See all your active goals)
@@ -46,6 +49,9 @@ bot.onText(/\/setgoal (.+) (\d+(\.\d{1,2})?)/, (msg, match) => {
         saved: 0,
     })
 
+    //Set Last Interacted Goal
+    lastInteractedGoal[userId] = goalName;
+
     bot.sendMessage(chatId, `Goal "${goalName}" set for $${targetAmount.toFixed(2)}. Start saving with /add <amount>! Good luck`);
 
     // Debuging, delete later
@@ -60,28 +66,59 @@ bot.onText(/\/add (\d+(\.\d{1,2})?)(?: (.+))?/, (msg, match) => {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
     const amount = parseFloat(match[1]);
-    const goalName = match[3] ? match[3].trim() : null;
+    let specifiedGoalName = match[3] ? match[3].trim() : null;
 
     if(!userGoals[userId] || userGoals[userId].length === 0) {
         return bot.sendMessage(chatId, 'You have no active goals. Set one with /setgoal <name> <amount>.');
     }
 
-    userGoals[userId].forEach(goal => {
-        if(goalName.toLowerCase() === goal.name.toLowerCase()) {
-            goal.saved += amount;
-            bot.sendMessage(chatId, `Goal ${goalName} updated. You saved ${amount.toFixed(2)}. Total saved: ${goal.saved.toFixed(2)} / ${goal.target.toFixed(2)}`);
-            // Debuging, delete later
-            console.log(goal);
+    let targetGoal = null;
+    let actualGoalNameUsed = null;
 
-            if(goal.saved == goal.target){
-                bot.sendMessage(chatId,`Goal ${goalName} met! Congratulations!`)
-            }
+    if (specifiedGoalName) {
+        // User explicitly provided a goal name
+        targetGoal = userGoals[userId].find(goal => goal.name.toLowerCase() === specifiedGoalName.toLowerCase());
+        if (!targetGoal) {
+            return bot.sendMessage(chatId, `Goal "${specifiedGoalName}" not found. Please check the name or set a new goal.`);
         }
-        console.log(goal.name);
-    });
+        actualGoalNameUsed = targetGoal.name;
+    } else {
+        // User did NOT specify a goal name, try to use the last interacted goal
+        const lastGoalNameForUser = lastInteractedGoal[userId];
+        if (lastGoalNameForUser) {
+            targetGoal = userGoals[userId].find(goal => goal.name.toLowerCase() === lastGoalNameForUser.toLowerCase());
+            if (!targetGoal) {
+                // This could happen if the last goal was somehow removed or renamed
+                console.error(`Error: Last interacted goal "${lastGoalNameForUser}" not found for user ${userId}.`);
+                return bot.sendMessage(chatId, `It seems the last goal you interacted with ("${lastGoalNameForUser}") is no longer available. Please specify a goal name (e.g., /add 10 MyGoal).`);
+            }
+            actualGoalNameUsed = targetGoal.name;
+        } else {
+            // No last interacted goal and no goal name specified
+            return bot.sendMessage(chatId, 'Please specify a goal name (e.g., /add 10 MyGoal) or set a goal first with /setgoal.');
+        }
+    }
 
-    
+    if (targetGoal) {
+        targetGoal.saved += amount;
+        lastInteractedGoal[userId] = actualGoalNameUsed; // Update last interacted goal
+
+        const progress = (targetGoal.saved / targetGoal.target) * 100;
+
+        let message = `Goal "${targetGoal.name}" updated! You saved $${amount.toFixed(2)}.`;
+        message += `\nTotal saved: $${targetGoal.saved.toFixed(2)} / $${targetGoal.target.toFixed(2)} (${progress.toFixed(2)}%)`;
+
+        if (targetGoal.saved >= targetGoal.target) {
+            message += `\n\n🎉 Congratulations! You've reached your goal "${targetGoal.name}"!`;
+            // Optional: You might want to 'archive' or remove completed goals here
+        }
+
+        bot.sendMessage(chatId, message);
+        console.log(`Updated goal for user ${userId}:`, targetGoal); // Debugging
+    }
 });
+
+
 bot.onText(/\/add$/, (msg) => {
     bot.sendMessage(msg.chat.id, 'Usage: /add <amount> [goal_name] (e.g., /add 10 or /add 5 New Book)');
 });
