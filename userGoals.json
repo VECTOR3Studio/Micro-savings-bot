@@ -4,11 +4,6 @@
       "name": "iPhone",
       "target": 50,
       "saved": 15
-    },
-    {
-      "name": "pc",
-      "target": 50,
-      "saved": 30
     }
   ]
 }

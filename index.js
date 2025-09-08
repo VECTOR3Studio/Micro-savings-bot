@@ -336,6 +336,14 @@ bot.onText(/\/setgoal (.+) (\d+(\.\d{1,2})?)/, (msg, match) => {
       userGoals[userId] = [];
     }
 
+    if( targetAmount <= 0 ) {
+      return bot.sendMessage(
+        chatId, 
+        '❌ The target amount must be a positive number greater than zero. Please try again.',
+        { parse_mode: 'Markdown' }
+      );
+    }
+
     const existingGoal = userGoals[userId].find(g => g.name.toLowerCase() === goalName.toLowerCase());
     if (existingGoal) {
       return bot.sendMessage(
@@ -665,7 +673,8 @@ function processAddToGoalRequest(chatId, userId, goalName) {
  * Simulates /progress command execution
  */
 function simulateProgressCommand(chatId, userId, goalName) {
-  handleGoalsCommand(chatId, userId);
+  const mockMsg = { chat: { id: chatId }, from: { id: userId }, text: `/progress ${goalName}` };
+  bot.emit('text', mockMsg, [`/progress ${goalName}`, goalName]);
 }
 
 /**
